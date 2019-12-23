@@ -23,6 +23,10 @@ GREY    = (200,200,200)
 # fonts
 FONT = pg.font.Font('freesansbold.ttf', 55)
 
+# Frames per second
+FPS = 5
+
+CLOCK = pg.time.Clock()
 class Sudoku:
 
     def __init__(self):
@@ -59,10 +63,6 @@ class Sudoku:
         # 3. insert blanks for the puzzle aspect
         self.insertBlanks()
 
-    def prettyPrint(self):
-        for row in self.board:
-            print(row)
-
     def insertBlanks(self):
         # fill approx. half the board with blanks
         for _ in range(40):
@@ -97,88 +97,103 @@ class Sudoku:
         # if row col and box don't contain num then return true
         return True
 
-    # Backtracking algorithm used to solve the sudoku board
-    def solveBoard(self):
-        # find row, col of unnassigned cell
-        row = -1
-        col = -1
-        found = False
-
-        for i in range(0,9):
-            for j in range(0,9):
-                if self.board[i][j] == 0:
-                    row = i
-                    col = j
-                    found = True
-                    break
-            if found:
-                break
-
-        # if there is none return true
-        if not found:
-            return True
-
-        # for digits from 1 to 9
-        for i in range(1,10):
-            # - if no conflict for digit at row, col then assign and recursively fill rest of board
-            if self.safe(row, col, i):
-                self.board[row][col] = i
-                # - if recursion successful return true
-                if self.solveBoard():
-                    return True
-                # - else remove digit and try another number
-                else:
-                    self.board[row][col] = 0
-
-        # if all digits tried and no result, return false
-        return False
-
     def setBoard(self, arr):
         self.board = arr
+
+    def prettyPrint(self):
+        for row in self.board:
+            print(row)
 
 # draw the sudoku grid
 def drawGrid():
     # draw minor line
-    for x in range(0, WINDOWWIDTH, CELLSIZE): # vertical lines
+    for x in range(0, WINDOWHEIGHT, CELLSIZE): # vertical lines
         pg.draw.line(SCREEN, GREY, (x,0), (x,WINDOWHEIGHT))
 
-    for y in range(0, WINDOWHEIGHT, CELLSIZE): # horizontal lines
+    for y in range(0, WINDOWWIDTH, CELLSIZE): # horizontal lines
         pg.draw.line(SCREEN, GREY, (0,y), (WINDOWWIDTH,y))
 
     # draw major lines
-    for x in range(0, WINDOWWIDTH, SQUARESIZE): # vertical lines
+    for x in range(0, WINDOWHEIGHT, SQUARESIZE): # vertical lines
         pg.draw.line(SCREEN, BLACK, (x,0), (x,WINDOWWIDTH))
 
-    for y in range(0, WINDOWHEIGHT, SQUARESIZE): # horizontal lines
+    for y in range(0, WINDOWWIDTH, SQUARESIZE): # horizontal lines
         pg.draw.line(SCREEN, BLACK, (0,y), (WINDOWHEIGHT,y))
 
+def drawNumbers(board):
+    padding = CELLSIZE // 2
 
-def drawNumbers():
-    text = FONT.render('*numbers*', True, BLACK)
-    textRect = text.get_rect()
-    textRect.center = (400,400)
-    SCREEN.blit(text, textRect)
+    for row in range(len(board)):
+        for col in range(len(board)):
+            if board[row][col] != 0:
+                text = FONT.render("{}".format(board[row][col]), True, BLACK)
+                textRect = text.get_rect()
+                textRect.center = (CELLSIZE * col + padding, CELLSIZE * row + padding)
+                SCREEN.blit(text, textRect)
+
+# Backtracking algorithm used to solve the sudoku board
+def solveBoard(game):
+    refresh()
+    # find row, col of unnassigned cell
+    row = -1
+    col = -1
+    found = False
+
+    for i in range(0,9):
+        for j in range(0,9):
+            if game.board[i][j] == 0:
+                row = i
+                col = j
+                found = True
+                break
+        if found:
+            break
+
+    # if there is none return true
+    if not found:
+        return True
+
+    # for digits from 1 to 9
+    for i in range(1,10):
+        # - if no conflict for digit at row, col then assign and recursively fill rest of board
+        if game.safe(row, col, i):
+            game.board[row][col] = i
+            # - if recursion successful return true
+            if solveBoard(game):
+                return True
+            # - else remove digit and try another number
+            else:
+                game.board[row][col] = 0
+
+    # if all digits tried and no result, return false
+    return False
+
+def refresh():
+    SCREEN.fill(WHITE)
+
+    drawGrid()
+    drawNumbers(board.board)
+
+
+    pg.display.update()
+    CLOCK.tick(FPS)
+
 
 if __name__ == "__main__":
-    b = Sudoku()
-    b.prettyPrint()
-    print(b.solveBoard())
-    b.prettyPrint()
-
+    board = Sudoku()
     run = True
+    spaceBarPressed = False
 
     # Main game loop
     while run:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 run = False
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE and not spaceBarPressed:
+                    spaceBarPressed = True
+                    solveBoard(board)
+        refresh()
 
-        SCREEN.fill(WHITE)
-
-        drawGrid()
-        drawNumbers()
-
-
-        pg.display.update()
 
 
